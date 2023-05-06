@@ -1,0 +1,61 @@
+project_name: sysinfo-cli
+
+env:
+  - GO111MODULE=on
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+
+  - id: static
+    binary: sysinfo
+    env:
+      - CGO_ENABLED=1
+    ldflags:
+      - "-linkmode external -extldflags -static"
+    flags:
+      - -tags=release
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    overrides:
+      - goos: linux
+        goarch: amd64
+        env:
+          - CC=gcc
+
+      - goos: linux
+        goarch: arm64
+        env:
+          - CC=aarch64-linux-gnu-gcc
+    hooks:
+      post:
+        - cmd: upx "{{ .Path }}"
+
+archives:
+
+  - id: archive_static
+    builds: [static]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    format: tar.gz
+    wrap_in_directory: true
+    files:
+      - none*
+
+release:
+  github:
+    owner: jbox-web
+    name: sysinfo-cli
+  draft: false
+  prerelease: auto
+  name_template: "{{.ProjectName}}-v{{.Version}}"
